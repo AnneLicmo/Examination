@@ -12,7 +12,7 @@ class FindUsRepository {
     Map mapData;
     header = await prefs.getLocalStorage(SharedPrefsKeys.accessToken);
     final response = await HttpClient.instance
-        .getData(APIPathHelper.getValue(APIPath.location), header);
+        .getData(APIPathHelper.getValue(APIPath.apilocation), header);
     data = jsonEncode(response);
     mapData = convert.json.decode(data);
     return FindUSResponse.fromJson(response);

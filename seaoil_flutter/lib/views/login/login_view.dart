@@ -26,96 +26,115 @@ class _LoginViewState extends State<LoginView> {
 
   @override
   Widget build(BuildContext context) {
-    final loading = Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: const <Widget>[
-        CircularProgressIndicator(),
-        Text(" Login ... Please wait")
-      ],
-    );
     return SafeArea(
-      child: Scaffold(
-        appBar: appBarWithoutIcon("Login", Colors.lightBlue),
-        body: SingleChildScrollView(
-          child: Container(
-            padding: const EdgeInsets.all(40.0),
-            child: Form(
-              key: formKey,
+      child: Stack(
+        children: [
+          Scaffold(
+            //appBar: appBarWithoutIcon("Sea oil", Colors.lightBlue),
+            // appBar: AppBar(
+            //   backgroundColor: Colors.transparent,
+            // ),
+            body: SingleChildScrollView(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(
-                    height: 15.0,
-                  ),
-                  const Text("Mobile Number"),
-                  const SizedBox(
-                    height: 5.0,
-                  ),
-                  TextFormField(
-                    keyboardType: TextInputType.number,
-                    controller: _mobileNumberController,
-                    autofocus: false,
-                    validator: (value) {
-                      if (value!.isEmpty) {
-                        return "Mobile Number is required!";
-                      } else {
-                        _mobileNumber = value;
-                      }
-                    },
-                    onSaved: (value) =>
-                        value!.isEmpty ? null : _mobileNumber = value,
-                    decoration: buildInputDecoration(
-                        'Enter Mobile Number', Icons.phone),
-                  ),
-                  const SizedBox(
-                    height: 20.0,
-                  ),
-                  const Text("Password"),
-                  const SizedBox(
-                    height: 5.0,
-                  ),
-                  TextFormField(
-                    keyboardType: TextInputType.number,
-                    controller: _passwordController,
-                    autofocus: false,
-                    obscureText: true,
-                    validator: (value) {
-                      if (value!.isEmpty) {
-                        return "Password is required!";
-                      } else {
-                        _password = value;
-                      }
-                    },
-                    onSaved: (value) =>
-                        value!.isEmpty ? null : _password = value,
-                    decoration:
-                        buildInputDecoration('Enter Password', Icons.lock),
-                  ),
-                  const SizedBox(
-                    height: 20.0,
-                  ),
-                  SizedBox(
-                    width: MediaQuery.of(context).size.width,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: MediaQuery.of(context).size.width,
-                          child: SeaoilButton(
-                            text: 'Login',
-                            onPressed: () {
-                              doValidate();
-                            },
+                  Padding(
+                    padding: const EdgeInsets.only(top: 60.0),
+                    child: Center(
+                      child: Container(
+                        height: 150,
+                        width: 200,
+                        decoration: const BoxDecoration(
+                          image: DecorationImage(
+                            image: AssetImage("assets/images/Seaoil_Logo.jpg"),
+                            fit: BoxFit.contain,
                           ),
                         ),
-                      ],
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(40.0),
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(
+                            height: 15.0,
+                          ),
+                          const Text("Mobile Number"),
+                          const SizedBox(
+                            height: 5.0,
+                          ),
+                          TextFormField(
+                            keyboardType: TextInputType.number,
+                            controller: _mobileNumberController,
+                            autofocus: false,
+                            validator: (value) {
+                              if (value!.isEmpty) {
+                                return "Mobile Number is required!";
+                              } else {
+                                _mobileNumber = value;
+                              }
+                            },
+                            onSaved: (value) =>
+                                value!.isEmpty ? null : _mobileNumber = value,
+                            decoration: buildInputDecoration(
+                                'Enter Mobile Number', Icons.phone),
+                          ),
+                          const SizedBox(
+                            height: 20.0,
+                          ),
+                          const Text("Password"),
+                          const SizedBox(
+                            height: 5.0,
+                          ),
+                          TextFormField(
+                            keyboardType: TextInputType.number,
+                            controller: _passwordController,
+                            autofocus: false,
+                            obscureText: true,
+                            validator: (value) {
+                              if (value!.isEmpty) {
+                                return "Password is required!";
+                              } else {
+                                _password = value;
+                              }
+                            },
+                            onSaved: (value) =>
+                                value!.isEmpty ? null : _password = value,
+                            decoration: buildInputDecoration(
+                                'Enter Password', Icons.lock),
+                          ),
+                          const SizedBox(
+                            height: 20.0,
+                          ),
+                          SizedBox(
+                            width: MediaQuery.of(context).size.width,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: MediaQuery.of(context).size.width,
+                                  child: SeaoilButton(
+                                    text: 'Login',
+                                    onPressed: () {
+                                      doValidate();
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -124,10 +143,7 @@ class _LoginViewState extends State<LoginView> {
     if (formKey.currentState!.validate()) {
       formKey.currentState!.save();
       doLogin();
-    } else {
-      // formKey.currentState!.save();
-      // doLogin();
-    }
+    } 
   }
 
   doLogin() async {
@@ -137,6 +153,8 @@ class _LoginViewState extends State<LoginView> {
       if (value.status == "success") {
         Navigator.pushNamedAndRemoveUntil(
             context, "/findus", (Route<dynamic> route) => false);
+      }else{
+        showModalErrorDialog(context, value.listData.message.toString());
       }
     }).catchError((e) {
       errorMessage = e.toString();

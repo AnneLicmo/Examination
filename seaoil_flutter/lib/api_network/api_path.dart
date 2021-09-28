@@ -1,6 +1,6 @@
 enum APIPath {
   apiLogin,
-  location,
+  apilocation,
 }
 
 class APIPathHelper {
@@ -8,7 +8,7 @@ class APIPathHelper {
     switch (path) {
       case APIPath.apiLogin:
         return "/v2/sessions";
-      case APIPath.location:
+      case APIPath.apilocation:
         return "/stations?all";
       default:
         return "";

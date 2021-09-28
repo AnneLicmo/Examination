@@ -67,11 +67,10 @@ ElevatedButton seaoilButton(
 }
 
 class SeaoilButton extends StatelessWidget {
-  SeaoilButton({
-    required this.text,
-    required this.onPressed,
-    this.textColor = Colors.white,
-  });
+  SeaoilButton(
+      {required this.text,
+      required this.onPressed,
+      this.textColor = Colors.blue});
 
   final String text;
   final GestureTapCallback onPressed;
@@ -81,12 +80,15 @@ class SeaoilButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ElevatedButton(
         style: ElevatedButton.styleFrom(
-          primary: Colors.blue,
+          primary: Colors.yellow,
           padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
           textStyle: const TextStyle(fontSize: 20),
         ),
         onPressed: onPressed,
-        child: Text(text));
+        child: Text(
+          text,
+          style: TextStyle(color: textColor,fontFamily: 'Calibri',fontWeight: FontWeight.w700),
+        ));
   }
 }
 

@@ -14,21 +14,23 @@ class FindUsView extends StatefulWidget {
 }
 
 class _FindUsViewState extends State<FindUsView> {
-  bool isSearching = false;
   int value = -1;
+  int value1 = -1;
   late TextEditingController _searchController;
+  late GoogleMapController _controller;
+  late Position currentLocation;
   late LatLng _center = LatLng(0.0, 0.0);
-  late LatLng _newCamPosition;
-  String long = "", latitude = "";
+  late LatLng _oldLocation;
   var errorMessage;
-  bool showLoading = false;
-  bool isCameraMove = false;
-  bool isShowDetail = false;
+  bool isSearching = false,
+      showLoading = false,
+      isCameraMove = false,
+      isShowDetail = false;
   String query = "", stationName = "", address = "", distance = "";
-  GoogleMapController? _controller;
-  List<StationDetail> _searchResult = [];
-  List<StationDetail> _getStationList = [];
-
+  List<StationDetail> _searchResult = [],
+      _getCompleteStationList = [],
+      _getStationList = [];
+  List<Marker> allMarkers = [];
   Icon actionIcon = const Icon(
     Icons.search,
     color: Colors.white,
@@ -45,53 +47,59 @@ class _FindUsViewState extends State<FindUsView> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
-          appBar: AppBar(
-            elevation: 0.0,
-            bottomOpacity: 0.0,
-            backgroundColor: Colors.deepPurple,
-            centerTitle: true,
-            title: const Text("Search Station"),
-            actions: [
-              IconButton(
-                  onPressed: () {
-                    if (actionIcon.icon == Icons.search) {
-                      actionIcon = const Icon(
-                        Icons.close,
-                        color: Colors.white,
-                      );
-                      setState(() {
-                        isSearching = true;
-                      });
-                    } else {
-                      actionIcon = const Icon(
-                        Icons.search,
-                        color: Colors.white,
-                      );
-                      setState(() {
-                        isSearching = false;
-                      });
-                    }
-                  },
-                  icon: actionIcon)
-            ],
-          ),
-          body: Stack(
-            alignment: Alignment.center,
-            children: [
-              isSearching
-                  ? topSearchList()
-                  : _getStationList.isNotEmpty
-                      ? topHeader()
-                      : const Center(child: CircularProgressIndicator()),
-            ],
-          ),
-          bottomSheet: isSearching
-              ? null
-              : isShowDetail
-                  ? bottomDetails()
-                  : _getStationList.isNotEmpty
-                      ? bottom()
-                      : null),
+        appBar: AppBar(
+          elevation: 0.0,
+          bottomOpacity: 0.0,
+          backgroundColor: Colors.deepPurple,
+          centerTitle: true,
+          title: const Text("Search Station"),
+          actions: [
+            IconButton(
+                onPressed: () {
+                  if (actionIcon.icon == Icons.search) {
+                    actionIcon = const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                    );
+                    setState(() {
+                      isSearching = true;
+                    });
+                  } else {
+                    actionIcon = const Icon(
+                      Icons.search,
+                      color: Colors.white,
+                    );
+                    _controller.animateCamera(CameraUpdate.newCameraPosition(
+                        CameraPosition(target: _oldLocation, zoom: 18.0)));
+                    setState(() {
+                      isSearching = false;
+                      isShowDetail = false;
+                      _center = _oldLocation;
+                      query = "";
+                      _searchController.text = "";
+                      value = -1;
+                    });
+                  }
+                },
+                icon: actionIcon)
+          ],
+        ),
+        body: Stack(
+          alignment: Alignment.center,
+          children: [
+            isSearching
+                ? topSearchList()
+                : _getStationList.isNotEmpty
+                    ? topHeader()
+                    : const Center(child: CircularProgressIndicator()),
+          ],
+        ),
+        bottomSheet: isSearching
+            ? null
+            : _getStationList.isNotEmpty
+                ? bottom()
+                : null,
+      ),
     );
   }
 
@@ -100,27 +108,38 @@ class _FindUsViewState extends State<FindUsView> {
     FindUsRepository.getLocationList().then((value) async {
       if (value.status == "success") {
         await Future.delayed(const Duration(seconds: 3));
-        Position position = await Geolocator.getCurrentPosition(
+        currentLocation = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.best,
         );
         for (var item in value.stationlist) {
           final distance = Geolocator.distanceBetween(
-              position.latitude,
-              position.longitude,
+              currentLocation.latitude,
+              currentLocation.longitude,
               double.parse(item.lat),
               double.parse(item.lng));
           double distanceInKiloMeters = distance / 1000;
           double roundDistanceInKM =
               double.parse((distanceInKiloMeters).toStringAsFixed(2));
-          _getStationList.add(StationDetail(
+          int vString = (roundDistanceInKM * 100).toInt();
+          int totalKM = vString ~/ 100;
+          if (totalKM <= 4) {
+            _getStationList.add(StationDetail(
+                stationName: item.name,
+                stationLat: item.lat,
+                stationLong: item.lng,
+                address: item.address,
+                distance: totalKM));
+          }
+          _getCompleteStationList.add(StationDetail(
               stationName: item.name,
               stationLat: item.lat,
               stationLong: item.lng,
               address: item.address,
-              distance: roundDistanceInKM));
+              distance: totalKM));
         }
         setState(() {
-          _center = LatLng(position.latitude, position.longitude);
+          _center = LatLng(currentLocation.latitude, currentLocation.longitude);
+          _oldLocation = _center;
         });
       }
     }).catchError((e) {
@@ -132,12 +151,11 @@ class _FindUsViewState extends State<FindUsView> {
   getDetails(String value) {
     _searchResult.clear();
     if (value != "") {
-      String inCaps = '${value[0].toUpperCase()}${value.substring(1)}';
+      String inCaps = '${value.toUpperCase()}';
       setState(() {
         query = value;
-        for (var element in _getStationList) {
-          if (element.stationName.contains(inCaps) ||
-              element.stationName.contains(inCaps)) {
+        for (var element in _getCompleteStationList) {
+          if (element.stationName.toUpperCase().contains(inCaps)) {
             _searchResult.add(element);
           }
         }
@@ -145,8 +163,8 @@ class _FindUsViewState extends State<FindUsView> {
     }
   }
 
-  _onCameraMove(CameraPosition position) {
-    _newCamPosition = position.target;
+  void _onMapCreated(GoogleMapController controller) {
+    _controller = controller;
   }
 
 // --------------------------Top Header Search-----------------------//
@@ -179,9 +197,11 @@ class _FindUsViewState extends State<FindUsView> {
         ),
         Expanded(
           child: GoogleMap(
+            onMapCreated: _onMapCreated,
+            myLocationEnabled: true,
             initialCameraPosition: CameraPosition(
               target: _center,
-              zoom: 15.0,
+              zoom: 18.0,
             ),
           ),
         ),
@@ -258,30 +278,49 @@ class _FindUsViewState extends State<FindUsView> {
         query == ""
             ? Expanded(
                 child: ListView.builder(
-                  itemCount: _getStationList.length,
+                  itemCount: _getCompleteStationList.length,
                   shrinkWrap: false,
                   itemBuilder: (BuildContext context, index) {
                     return RadioListTile(
                       value: index,
-                      groupValue: value,
+                      groupValue: value1,
                       controlAffinity: ListTileControlAffinity.trailing,
                       onChanged: (ind) {
+                        _center = LatLng(
+                            double.parse(
+                                _getCompleteStationList[index].stationLat),
+                            double.parse(
+                                _getCompleteStationList[index].stationLong));
+                        _controller.animateCamera(
+                            CameraUpdate.newCameraPosition(
+                                CameraPosition(target: _center, zoom: 18.0)));
                         setState(() {
-                          value = index;
                           isSearching = false;
                           isShowDetail = true;
-                          stationName = _getStationList[index].stationName;
-                          address = _getStationList[index].address;
-                          distance = _getStationList[index].distance.toString();
+
+                          allMarkers.add(Marker(
+                              markerId: MarkerId(
+                                  _getCompleteStationList[index].stationName),
+                              draggable: false,
+                              position: _center));
+                          value = index;
+                          stationName =
+                              _getCompleteStationList[index].stationName;
+                          address = _getCompleteStationList[index].address;
+                          distance = _getCompleteStationList[index]
+                              .distance
+                              .toString();
                         });
                       },
                       title: Text(
-                        _getStationList[index].stationName,
-                        style: const TextStyle(fontSize: 14),
+                        _getCompleteStationList[index].stationName,
+                        style: const TextStyle(fontSize: 12),
                       ),
                       subtitle: Text(
-                          _getStationList[index].distance.toString() +
-                              " km away from you"),
+                        _getCompleteStationList[index].distance.toString() +
+                            " km away from you",
+                        style: const TextStyle(fontSize: 11),
+                      ),
                     );
                   },
                 ),
@@ -300,12 +339,29 @@ class _FindUsViewState extends State<FindUsView> {
                       stationName = _searchResult[index].stationName;
                       return RadioListTile(
                         value: index,
-                        groupValue: value,
+                        groupValue: value1,
                         controlAffinity: ListTileControlAffinity.trailing,
                         onChanged: (ind) {
+                          _controller.animateCamera(
+                              CameraUpdate.newCameraPosition(CameraPosition(
+                                  target: LatLng(
+                                      double.parse(
+                                          _searchResult[index].stationLat),
+                                      double.parse(
+                                          _searchResult[index].stationLong)),
+                                  zoom: 18.0)));
                           setState(() {
-                            value = index;
+                            isSearching = false;
                             isShowDetail = true;
+                            _center = LatLng(
+                                double.parse(_searchResult[index].stationLat),
+                                double.parse(_searchResult[index].stationLong));
+                            allMarkers.add(Marker(
+                                markerId:
+                                    MarkerId(_searchResult[index].stationName),
+                                draggable: false,
+                                position: _center));
+                            value = index;
                             stationName = _searchResult[index].stationName;
                             address = _searchResult[index].address;
                             distance = _searchResult[index].distance.toString();
@@ -313,12 +369,14 @@ class _FindUsViewState extends State<FindUsView> {
                         },
                         toggleable: true,
                         title: Text(
-                          _getStationList[index].stationName,
-                          style: const TextStyle(fontSize: 14),
+                          _searchResult[index].stationName,
+                          style: const TextStyle(fontSize: 12),
                         ),
                         subtitle: Text(
-                            _getStationList[index].distance.toString() +
-                                " km away from you"),
+                          _searchResult[index].distance.toString() +
+                              " km away from you",
+                          style: const TextStyle(fontSize: 11),
+                        ),
                       );
                     },
                   ),
@@ -337,7 +395,8 @@ class _FindUsViewState extends State<FindUsView> {
       ),
       backgroundColor: Colors.transparent,
       onClosing: () {},
-      builder: (BuildContext ctx) => displayStationList(),
+      builder: (BuildContext ctx) =>
+          isShowDetail ? detailStation() : displayStationList(),
     );
   }
 
@@ -376,7 +435,21 @@ class _FindUsViewState extends State<FindUsView> {
                 groupValue: value,
                 controlAffinity: ListTileControlAffinity.trailing,
                 onChanged: (ind) {
+                  _controller.animateCamera(CameraUpdate.newCameraPosition(
+                      CameraPosition(
+                          target: LatLng(
+                              double.parse(_getStationList[index].stationLat),
+                              double.parse(_getStationList[index].stationLong)),
+                          zoom: 18.0)));
+
                   setState(() {
+                    _center = LatLng(
+                        double.parse(_getStationList[index].stationLat),
+                        double.parse(_getStationList[index].stationLong));
+                    allMarkers.add(Marker(
+                        markerId: MarkerId(_getStationList[index].stationName),
+                        draggable: false,
+                        position: _center));
                     value = index;
                     isShowDetail = true;
                     stationName = _getStationList[index].stationName;
@@ -387,21 +460,18 @@ class _FindUsViewState extends State<FindUsView> {
                 toggleable: true,
                 title: Text(
                   _getStationList[index].stationName,
-                  style: const TextStyle(fontSize: 14),
+                  style: const TextStyle(fontSize: 12),
                 ),
-                subtitle: Text(_getStationList[index].distance.toString() +
-                    " km away from you"),
+                subtitle: Text(
+                    _getStationList[index].distance.toString() +
+                        " km away from you",
+                    style: const TextStyle(fontSize: 11)),
               );
             },
           ),
         ),
       ],
     );
-  }
-
-  Widget bottomDetails() {
-    return BottomSheet(
-        onClosing: () {}, builder: (BuildContext ctx) => detailStation());
   }
 
   Widget detailStation() {
@@ -412,80 +482,91 @@ class _FindUsViewState extends State<FindUsView> {
           shape: BoxShape.rectangle,
           borderRadius: BorderRadius.only(
               topLeft: Radius.circular(10.0), topRight: Radius.circular(10.0))),
-      child: Expanded(
-        child: Column(
-          children: [
-            ListTile(
-              title: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      textStyle: const TextStyle(fontSize: 20),
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        isSearching = false;
-                        isShowDetail = false;
-                      });
-                    },
-                    child: const Text(
-                      'Back to list',
-                      style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.lightBlue,
-                          fontWeight: FontWeight.bold),
-                    ),
+      child: Column(
+        children: [
+          ListTile(
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(
+                  style: TextButton.styleFrom(
+                    textStyle: const TextStyle(fontSize: 20),
                   ),
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      textStyle: const TextStyle(fontSize: 20),
-                    ),
-                    onPressed: () {
-                      isSearching = true;
-                    },
-                    child: const Text(
-                      'Done',
-                      style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.lightBlue,
-                          fontWeight: FontWeight.bold),
-                    ),
+                  onPressed: () {
+                    _controller.animateCamera(CameraUpdate.newCameraPosition(
+                        CameraPosition(target: _oldLocation, zoom: 18.0)));
+                    setState(() {
+                      isSearching = false;
+                      isShowDetail = false;
+                      _center = _oldLocation;
+                      _searchController.text = "";
+                      query == "";
+                      actionIcon = const Icon(
+                        Icons.search,
+                        color: Colors.white,
+                      );
+                      value = -1;
+                    });
+                  },
+                  child: const Text(
+                    'Back to list',
+                    style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.lightBlue,
+                        fontWeight: FontWeight.bold),
                   ),
-                ],
-              ),
+                ),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    textStyle: const TextStyle(fontSize: 20),
+                  ),
+                  onPressed: () {
+                    // setState(() {
+                    //   isSearching = true;
+                    //   isShowDetail = false;
+                    // });
+                  },
+                  child: const Text(
+                    'Done',
+                    style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.lightBlue,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
             ),
-            ListTile(
-              title: Text(
-                stationName,
-                style: const TextStyle(fontSize: 12),
-              ),
-              subtitle: Text(
-                address,
-                style: const TextStyle(fontSize: 10),
-              ),
+          ),
+          ListTile(
+            title: Text(
+              stationName,
+              style: const TextStyle(fontSize: 12),
             ),
-            ListTile(
-              title: Row(
-                children: [
-                  const Icon(Icons.car_rental),
-                  Text(
-                    distance + " km away",
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  const SizedBox(
-                    width: 5,
-                  ),
-                  const Icon(Icons.lock_clock),
-                  const Text(
-                    'Open 24 hours',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                ],
-              ),
+            subtitle: Text(
+              address,
+              style: const TextStyle(fontSize: 10),
             ),
-          ],
-        ),
+          ),
+          ListTile(
+            title: Row(
+              children: [
+                const Icon(Icons.car_rental),
+                Text(
+                  distance + " km away",
+                  style: const TextStyle(fontSize: 12),
+                ),
+                const SizedBox(
+                  width: 5,
+                ),
+                const Icon(Icons.lock_clock),
+                const Text(
+                  'Open 24 hours',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

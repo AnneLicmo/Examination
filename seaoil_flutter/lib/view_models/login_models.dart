@@ -1,4 +1,3 @@
-
 class LoginDataRequest {
   String mobileNumber;
   String password;
@@ -36,7 +35,9 @@ class LoginData {
       required this.createdAt,
       required this.expiresAt,
       required this.updatedAt,
-      required this.userUuid});
+      required this.userUuid,
+      required this.code,
+      required this.message});
   int id;
   String accessToken;
   String refreshToken;
@@ -45,16 +46,19 @@ class LoginData {
   String expiresAt;
   String updatedAt;
   String userUuid;
-
+  String code;
+  String message;
   factory LoginData.fromJson(Map<String, dynamic> data) {
-    final id = data['id'];
-    final accessToken = data['accessToken'];
-    final refreshToken = data['refreshToken'];
-    final userId = data['userId'];
-    final expiresAt = data['expiresAt'];
-    final updatedAt = data['updatedAt'];
-    final createdAt = data['createdAt'];
-    final userUuid = data['userUuid'];
+    final id = data['id'] ?? 0;
+    final accessToken = data['accessToken'] ?? "";
+    final refreshToken = data['refreshToken'] ?? "";
+    final userId = data['userId'] ??0;
+    final expiresAt = data['expiresAt'] ?? "";
+    final updatedAt = data['updatedAt'] ?? "";
+    final createdAt = data['createdAt'] ?? "";
+    final userUuid = data['userUuid'] ?? "";
+    final code = data['code'] ?? "";
+    final message = data['message'] ?? "";
     return LoginData(
         id: id,
         accessToken: accessToken,
@@ -63,6 +67,8 @@ class LoginData {
         expiresAt: expiresAt,
         updatedAt: updatedAt,
         createdAt: createdAt,
-        userUuid: userUuid);
+        userUuid: userUuid,
+        code: code,
+        message: message);
   }
 }

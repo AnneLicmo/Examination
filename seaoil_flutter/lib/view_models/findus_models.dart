@@ -107,7 +107,7 @@ class StationDetail {
   String stationLat;
   String stationLong;
   String address;
-  double distance;
+  int distance;
 
   StationDetail(
       {required this.stationName,
